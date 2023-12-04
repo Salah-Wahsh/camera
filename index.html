@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera Capture</title>
+  </head>
+  <body>
+    <video id="video" width="640" height="480" autoplay></video>
+    <select id="cameraDropdown"></select>
+    <button id="captureBtn">Capture</button>
+    <canvas id="canvas" width="640" height="480" style="display: none"></canvas>
+    <img id="capturedImage" src="" alt="Captured Image" style="display: none" />
+    <script src="main.js"></script>
+  </body>
+  <script>
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const capturedImage = document.getElementById("capturedImage");
+      const captureBtn = document.getElementById("captureBtn");
+      const cameraDropdown = document.getElementById("cameraDropdown");
+
+      let cameras = [];
+      let selectedCameraIndex = 0;
+
+      // Get the list of available cameras
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        cameras = devices.filter((device) => device.kind === "videoinput");
+        cameras.forEach((camera, index) => {
+          const option = document.createElement("option");
+          option.value = index;
+          option.text = camera.label || `Camera ${index + 1}`;
+          cameraDropdown.add(option);
+        });
+
+        // Start the default camera
+        startCamera();
+      });
+
+      // Access the selected camera
+      function startCamera() {
+        const selectedCamera = cameras[selectedCameraIndex];
+        navigator.mediaDevices
+          .getUserMedia({
+            video: { deviceId: { exact: selectedCamera.deviceId } },
+          })
+          .then((stream) => {
+            video.srcObject = stream;
+          })
+          .catch((error) => {
+            console.error("Error accessing camera: ", error);
+          });
+      }
+
+      // Capture image
+      captureBtn.addEventListener("click", () => {
+        canvas
+          .getContext("2d")
+          .drawImage(video, 0, 0, canvas.width, canvas.height);
+        capturedImage.src = canvas.toDataURL("image/png");
+        capturedImage.style.display = "block";
+        // Send the captured image to the server using AJAX or another method
+        //sendToServer(capturedImage.src);
+      });
+
+      // Change camera when dropdown selection changes
+      cameraDropdown.addEventListener("change", () => {
+        selectedCameraIndex = cameraDropdown.value;
+        // Stop the current stream
+        const tracks = video.srcObject.getTracks();
+        tracks.forEach((track) => track.stop());
+
+        // Start the new camera
+        startCamera();
+      });
+      /*
+      function sendToServer(imageData) {
+        fetch("upload.php", {
+          method: "POST",
+          body: JSON.stringify({ image: imageData }),
+        })
+          .then((response) => response.json())
+          .then((data) => console.log(data))
+          .catch((error) => console.error("Error:", error));
+      }
+  */
+    });
+  </script>
+</html>
